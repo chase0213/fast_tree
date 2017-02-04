@@ -18,8 +18,8 @@ ActiveRecord::Schema.define(version: 20170203070442) do
     t.datetime "updated_at", null: false
     t.integer  "l_ptr"
     t.integer  "r_ptr"
-    t.index ["l_ptr"], name: "index_test_trees_on_l_ptr", unique: true
-    t.index ["r_ptr"], name: "index_test_trees_on_r_ptr", unique: true
+    t.index ["l_ptr"], name: "index_test_trees_on_l_ptr"
+    t.index ["r_ptr"], name: "index_test_trees_on_r_ptr"
   end
 
 end

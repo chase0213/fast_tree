@@ -7,8 +7,8 @@ class AddFastTreeToTestTrees < ActiveRecord::Migration[5.0]
 
     end
 
-    add_index :test_trees, :l_ptr, unique: true
-    add_index :test_trees, :r_ptr, unique: true
+    add_index :test_trees, :l_ptr
+    add_index :test_trees, :r_ptr
   end
 
   def self.down

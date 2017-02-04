@@ -8,8 +8,8 @@ class AddFastTreeTo<%= table_name.camelize %> < ActiveRecord::Migration<%= migra
 <% end -%>
     end
 
-    add_index :<%= table_name %>, :l_ptr, unique: true
-    add_index :<%= table_name %>, :r_ptr, unique: true
+    add_index :<%= table_name %>, :l_ptr
+    add_index :<%= table_name %>, :r_ptr
   end
 
   def self.down

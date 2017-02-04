@@ -10,7 +10,7 @@ class FastTreeCreate<%= table_name.camelize %> < ActiveRecord::Migration<%= migr
       t.timestamps null: false
     end
 
-    add_index :<%= table_name %>, :l_ptr, unique: true
-    add_index :<%= table_name %>, :r_ptr, unique: true
+    add_index :<%= table_name %>, :l_ptr
+    add_index :<%= table_name %>, :r_ptr
   end
 end
