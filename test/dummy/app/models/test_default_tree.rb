@@ -1,0 +1,2 @@
+class TestDefaultTree < ApplicationRecord
+end

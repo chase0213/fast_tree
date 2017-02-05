@@ -5,6 +5,10 @@ module FastTree
     # class methods
     module ClassMethods
 
+      # ====================
+      # structure operation
+      # ====================
+
       def add_parent children, attributes={}
         left  = children.max {|c| c.l_ptr}.l_ptr
         right = children.min {|c| c.r_ptr}.r_ptr
@@ -61,6 +65,11 @@ module FastTree
         end
       end
 
+
+      # ================
+      # model operation
+      # ================
+
       def find_root
         self.find_by(l_ptr: 0)
       end
@@ -83,14 +92,18 @@ module FastTree
           # arrows
           ars = (st_node.r_ptr - st_node.l_ptr ).times.map{|s| "-"}.join('')
           # white spaces on the right
-          wsr = (root.width + 3 - wsl.size - ars.size).times.map{|s| " "}.join('')
+          wsr = (root.width + 2 - wsl.size - ars.size).times.map{|s| " "}.join('')
 
           puts("#{wsl}<#{ars}>#{wsr} ... #{st_node.name}")
         end
         puts("done.\n")
       end
-
     end
+
+
+    # =================
+    # Instance Methods
+    # =================
 
     def add_child attributes={}
       # In this method, the entity substitued by this model may be changed
@@ -113,7 +126,7 @@ module FastTree
 
       # fill empty space
       nodes = self.class.where(self.class.arel_table[:r_ptr].gteq(r_ptr))
-      update_nodes(nodes, l_ptr, r_ptr, - width)
+      update_nodes(nodes, l_ptr, r_ptr, - (width + 1))
 
       # return count of destroyed nodes
       n_destroyed
@@ -124,7 +137,7 @@ module FastTree
 
       # create empty space into which subtree embedded
       nodes = self.class.where(self.class.arel_table[:r_ptr].gteq(node.l_ptr))
-      update_nodes(nodes, node.l_ptr, node.r_ptr, width)
+      update_nodes(nodes, node.l_ptr, node.r_ptr, width + 1)
 
       bias = node.l_ptr + 1 - l_ptr
       subtree.each do |st_node|
@@ -146,13 +159,13 @@ module FastTree
 
       # fill (virtual) empty spaces that will be created by moving subtree
       nodes = self.class.where(self.class.arel_table[:l_ptr].gt(r_ptr))
-      update_nodes(nodes, l_ptr, r_ptr, - width)
+      update_nodes(nodes, l_ptr, r_ptr, - (width + 1))
 
       # create empty spaces under the node
       node.reload
       nodes = self.class.where(self.class.arel_table[:l_ptr].gteq(node.l_ptr))
                         .where(self.class.arel_table[:r_ptr].lteq(node.r_ptr))
-      update_nodes(nodes, node.l_ptr, node.r_ptr, width)
+      update_nodes(nodes, node.l_ptr, node.r_ptr, width + 1)
 
       # move subtree under the given node
       bias = node.l_ptr + 1 - l_ptr
@@ -164,15 +177,23 @@ module FastTree
     end
 
     def width
-      r_ptr - l_ptr + 1
+      r_ptr - l_ptr
     end
 
-    def height
+    def depth
+      path.size - 1
+    end
+
+    def path
+      self.class.where(self.class.arel_table[:l_ptr].lteq(l_ptr))
+                .where(self.class.arel_table[:r_ptr].gteq(r_ptr))
+                .order(l_ptr: :asc)
     end
 
     def print_subtree
       self.class.print_subtree(self)
     end
+
 
     protected
 

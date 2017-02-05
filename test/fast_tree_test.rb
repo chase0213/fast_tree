@@ -160,6 +160,12 @@ class FastTree::Test < ActiveSupport::TestCase
   end
 
   test "move_to should create a copy under given parent, and remove it" do
+    #
+    # <------->   ... root
+    # _<--->      ... child
+    # __<->       ... grand child
+    # _____<->    ... child out of scope
+    #
     root = TestTree.create({name: "root", l_ptr: 0, r_ptr: 7})
     child = TestTree.create({name: "child", l_ptr: 1, r_ptr: 4})
     grand_child = TestTree.create({name: "grand child", l_ptr: 2, r_ptr: 3})
@@ -183,5 +189,48 @@ class FastTree::Test < ActiveSupport::TestCase
     assert_equal 1, child_out_of_scope.l_ptr
     assert_equal 6, child_out_of_scope.r_ptr
   end
+
+  test "depth should return depth of a node from the root" do
+    #
+    # <--------->   ... root
+    # _<----->      ... child
+    # __<->         ... grand child
+    # ____<->       ... grand child
+    # _______<->    ... child out of scope
+    #
+    root = TestTree.create({name: "root", l_ptr: 0, r_ptr: 9})
+    child = TestTree.create({name: "child", l_ptr: 1, r_ptr: 6})
+    grand_child_1 = TestTree.create({name: "grand child", l_ptr: 2, r_ptr: 3})
+    grand_child_2 = TestTree.create({name: "grand child", l_ptr: 4, r_ptr: 5})
+    child_out_of_scope = TestTree.create({name: "child out of scope", l_ptr: 7, r_ptr: 8})
+
+    assert_equal 0, root.depth
+    assert_equal 1, child.depth
+    assert_equal 2, grand_child_1.depth
+    assert_equal 2, grand_child_2.depth
+    assert_equal 1, child_out_of_scope.depth
+  end
+
+  test "path should return a path from the root to a path" do
+    #
+    # <--------->   ... root
+    # _<----->      ... child
+    # __<->         ... grand child
+    # ____<->       ... grand child
+    # _______<->    ... child out of scope
+    #
+    root = TestTree.create({name: "root", l_ptr: 0, r_ptr: 9})
+    child = TestTree.create({name: "child", l_ptr: 1, r_ptr: 6})
+    grand_child_1 = TestTree.create({name: "grand child", l_ptr: 2, r_ptr: 3})
+    grand_child_2 = TestTree.create({name: "grand child", l_ptr: 4, r_ptr: 5})
+    child_out_of_scope = TestTree.create({name: "child out of scope", l_ptr: 7, r_ptr: 8})
+
+    assert_equal [root], root.path
+    assert_equal [root, child], child.path
+    assert_equal [root, child, grand_child_1], grand_child_1.path
+    assert_equal [root, child, grand_child_2], grand_child_2.path
+    assert_equal [root, child_out_of_scope], child_out_of_scope.path
+  end
+
 
 end
