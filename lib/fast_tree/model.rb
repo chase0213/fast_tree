@@ -19,36 +19,31 @@ module FastTree
 
         nodes = self.where(self.arel_table[:r_ptr].gt(left))
 
-        # update nodes
-        nodes.each do |node|
-          # In this method, the entity substitued by this model may be changed
-          node.reload
+        sql = <<-"EOS"
+UPDATE #{self.to_s.underscore.pluralize}
+  SET l_ptr = CASE
+                WHEN l_ptr >= #{left}
+                  AND r_ptr <= #{right}
+                  THEN l_ptr + 1
+                WHEN l_ptr > #{right}
+                  THEN l_ptr + 2
+                ELSE l_ptr
+                END,
+      r_ptr = CASE
+                WHEN l_ptr >= #{left}
+                  AND r_ptr <= #{right}
+                  THEN r_ptr + 1
+                WHEN l_ptr < #{left}
+                  AND r_ptr > #{right}
+                  THEN r_ptr + 2
+                WHEN l_ptr > #{right}
+                  THEN r_ptr + 2
+                ELSE r_ptr
+              END
+  WHERE r_ptr > #{left}
+        EOS
 
-          if node.l_ptr >= left and node.r_ptr <= right
-            #
-            #      <------->
-            #    <----------->  : parent
-            #
-            node.l_ptr += 1
-            node.r_ptr += 1
-
-          elsif node.l_ptr < left and node.r_ptr > right
-            #  <--------------->
-            #    <----------->  : parent
-            node.r_ptr += 2
-
-          elsif node.l_ptr > right
-            #                   <------>
-            #    <----------->  : parent
-            node.l_ptr += 2
-            node.r_ptr += 2
-
-          else
-            raise FastTree::Model::InvalidTreeStructureError
-          end
-
-          node.save
-        end
+        ActiveRecord::Base.connection.execute(sql)
 
         # create parent over children
         self.create(attributes)
@@ -113,8 +108,8 @@ module FastTree
       attributes[:l_ptr] = r_ptr
       attributes[:r_ptr] = r_ptr + 1
 
-      nodes = self.class.where(self.class.arel_table[:r_ptr].gteq(r_ptr))
-      update_nodes(nodes, r_ptr, r_ptr)
+      # bulk update nodes by a sql query
+      update_nodes(r_ptr, r_ptr, "r_ptr >= #{r_ptr}")
 
       # create child
       self.class.create(attributes)
@@ -125,8 +120,7 @@ module FastTree
       n_destroyed = self.class.find_subtree_by_root(self).destroy_all
 
       # fill empty space
-      nodes = self.class.where(self.class.arel_table[:r_ptr].gteq(r_ptr))
-      update_nodes(nodes, l_ptr, r_ptr, - (width + 1))
+      update_nodes(l_ptr, r_ptr, "r_ptr >= #{r_ptr}", - (width + 1))
 
       # return count of destroyed nodes
       n_destroyed
@@ -136,8 +130,7 @@ module FastTree
       subtree = self.class.find_subtree_by_root(self)
 
       # create empty space into which subtree embedded
-      nodes = self.class.where(self.class.arel_table[:r_ptr].gteq(node.l_ptr))
-      update_nodes(nodes, node.l_ptr, node.r_ptr, width + 1)
+      update_nodes(node.l_ptr, node.r_ptr, "r_ptr >= #{r_ptr}", width + 1)
 
       bias = node.l_ptr + 1 - l_ptr
       subtree.each do |st_node|
@@ -158,14 +151,11 @@ module FastTree
       subtree = self.class.find_subtree_by_root(self)
 
       # fill (virtual) empty spaces that will be created by moving subtree
-      nodes = self.class.where(self.class.arel_table[:l_ptr].gt(r_ptr))
-      update_nodes(nodes, l_ptr, r_ptr, - (width + 1))
+      update_nodes(l_ptr, r_ptr, "l_ptr > #{r_ptr}", - (width + 1))
 
       # create empty spaces under the node
       node.reload
-      nodes = self.class.where(self.class.arel_table[:l_ptr].gteq(node.l_ptr))
-                        .where(self.class.arel_table[:r_ptr].lteq(node.r_ptr))
-      update_nodes(nodes, node.l_ptr, node.r_ptr, width + 1)
+      update_nodes(node.l_ptr, node.r_ptr, "l_ptr >= #{node.l_ptr} AND r_ptr <= #{node.r_ptr}", width + 1)
 
       # move subtree under the given node
       bias = node.l_ptr + 1 - l_ptr
@@ -197,47 +187,39 @@ module FastTree
 
     protected
 
-      def update_nodes nodes, left, right, diff=2
-        # update nodes
+      def update_nodes left, right, condition, diff=2
+        #
+        # NOTE:
+        # Due to performance reason,
+        # use raw SQL query to move nodes
+        #
 
-        nodes.each do |node|
-          # In this method, the entity substitued by this model may be changed
-          node.reload
+        sql = <<-"EOS"
+UPDATE #{self.class.to_s.underscore.pluralize}
+SET l_ptr = CASE
+              WHEN l_ptr > #{right}
+                THEN l_ptr + #{diff}
+              WHEN l_ptr > #{left}
+                AND r_ptr < #{right}
+                THEN l_ptr + #{diff - 1}
+              ELSE l_ptr
+            END,
+    r_ptr = CASE
+              WHEN l_ptr <= #{left}
+                AND r_ptr >= #{right}
+                THEN r_ptr + #{diff}
+              WHEN l_ptr > #{right}
+                THEN r_ptr + #{diff}
+              WHEN l_ptr > #{left}
+                AND r_ptr < #{right}
+                THEN r_ptr + #{diff - 1}
+              ELSE
+                r_ptr
+            END
+WHERE #{condition}
+        EOS
 
-          if node.l_ptr <= left and node.r_ptr >= right
-            #
-            #  <--------------->  ... node
-            #    <----------->
-            #    |           |
-            #    +- left     +- right
-            #
-            node.r_ptr += diff
-
-          elsif node.l_ptr > right
-            #
-            #                   <------>  ... node
-            #    <----------->
-            #    |           |
-            #    +- left     +- right
-            #
-            node.l_ptr += diff
-            node.r_ptr += diff
-
-          elsif node.l_ptr > left and node.r_ptr < right
-            #
-            #      <------->    ... node
-            #    <----------->
-            #    |           |
-            #    +- left     +- right
-            #
-            node.l_ptr += diff - 1
-            node.r_ptr += diff - 1
-
-          else
-          end
-
-          node.save
-        end
+        ActiveRecord::Base.connection.execute(sql)
       end
 
       class InvalidTreeStructureError < ActiveRecord::RecordInvalid; end

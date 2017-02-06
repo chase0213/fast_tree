@@ -232,5 +232,4 @@ class FastTree::Test < ActiveSupport::TestCase
     assert_equal [root, child_out_of_scope], child_out_of_scope.path
   end
 
-
 end
