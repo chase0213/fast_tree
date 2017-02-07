@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/chase0213/fast_tree/tree/master.svg?style=svg)](https://circleci.com/gh/chase0213/fast_tree/tree/master)
 
-Fast tree structure using nested sets model.
+Fast and Intuitive tree structure using nested sets model.
 
 ## Installation
 Add this line to your application's Gemfile:
