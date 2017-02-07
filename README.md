@@ -1,4 +1,7 @@
 # FastTree
+
+[![CircleCI](https://circleci.com/gh/chase0213/fast_tree/tree/master.svg?style=svg)](https://circleci.com/gh/chase0213/fast_tree/tree/master)
+
 Short description and motivation.
 
 ## Usage
