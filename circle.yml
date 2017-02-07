@@ -10,7 +10,7 @@ dependencies:
 
 database:
   override:
-    - cd test/dummy && bundle exec rake db:create && db:migrate
+    - cd test/dummy && bundle exec rake db:create db:migrate
 
 test:
   override:
