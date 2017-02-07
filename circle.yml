@@ -1,0 +1,18 @@
+machine:
+  ruby:
+    version: 2.3.1
+  environment:
+    RAILS_ENV: test
+
+dependencies:
+  override:
+    - bundle install
+
+database:
+  override:
+    - bundle exec rake db:create && db:migrate
+
+test:
+  override:
+    - bundle exec rake test
+
