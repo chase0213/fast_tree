@@ -2,22 +2,52 @@ module FastTree
   module Model
     extend ActiveSupport::Concern
 
-    # class methods
+    # =================
+    # Class Methods
+    # =================
+
     module ClassMethods
 
       # ====================
       # structure operation
       # ====================
 
-      def add_parent children, attributes={}
-        left  = children.max {|c| c.l_ptr}.l_ptr
-        right = children.min {|c| c.r_ptr}.r_ptr
+      def add_parent(parent, children, &block)
+        # create space for parent
+        ptrs = _create_parent_embedded_space(children)
 
         # parent node's pointer
-        attributes[:l_ptr] = left
-        attributes[:r_ptr] = right + 2
+        parent.l_ptr = ptrs[:l_ptr]
+        parent.r_ptr = ptrs[:r_ptr]
+        parent.save
+      end
 
-        nodes = self.where(self.arel_table[:r_ptr].gt(left))
+      def create_parent(attributes = {}, children, &block)
+        # create space for parent
+        ptrs = _create_parent_embedded_space(children)
+
+        # parent node's pointer
+        attributes[:l_ptr] = ptrs[:l_ptr]
+        attributes[:r_ptr] = ptrs[:r_ptr]
+
+        self.create(attributes, &block)
+      end
+
+      def create_tree(attributes={}, &block)
+        root = self.find_root
+        if root
+          root
+        else
+          attributes[:l_ptr] = 0
+          attributes[:r_ptr] = 1
+          self.create(attributes, &block)
+        end
+      end
+
+
+      def _create_parent_embedded_space(children)
+        left  = children.max {|c| c.l_ptr}.l_ptr
+        right = children.min {|c| c.r_ptr}.r_ptr
 
         sql = <<-"EOS"
 UPDATE #{self.to_s.underscore.pluralize}
@@ -45,21 +75,9 @@ UPDATE #{self.to_s.underscore.pluralize}
 
         ActiveRecord::Base.connection.execute(sql)
 
-        # create parent over children
-        self.create(attributes)
+        # return left and right pointers between which parent is embedded
+        {l_ptr: left, r_ptr: right + 2}
       end
-
-      def create_tree attributes={}
-        root = self.find_root
-        if root
-          root
-        else
-          attributes[:l_ptr] = 0
-          attributes[:r_ptr] = 1
-          self.create(attributes)
-        end
-      end
-
 
       # ================
       # model operation
@@ -69,7 +87,7 @@ UPDATE #{self.to_s.underscore.pluralize}
         self.find_by(l_ptr: 0)
       end
 
-      def find_subtree_by_root node
+      def find_subtree_by_root(node)
         l_ptr = node.l_ptr
         r_ptr = node.r_ptr
 
@@ -77,7 +95,11 @@ UPDATE #{self.to_s.underscore.pluralize}
             .where(self.arel_table[:r_ptr].lteq(r_ptr))
       end
 
-      def print_subtree root
+      # ================
+      # for debugging
+      # ================
+
+      def print_subtree(root)
         puts("printing sub tree for #{root.name}...")
         subtree = find_subtree_by_root(root)
         subtree.order(l_ptr: :asc).each do |st_node|
@@ -96,41 +118,40 @@ UPDATE #{self.to_s.underscore.pluralize}
     end
 
 
+    #     class methods
+    # =========================================================
+    #    instance methods
+
+
     # =================
     # Instance Methods
     # =================
 
-    def add_child attributes={}
-      # In this method, the entity substitued by this model may be changed
-      self.reload
+    def add_child(node)
+      # bulk update nodes by a sql query
+      _update_nodes(r_ptr, r_ptr, "r_ptr >= #{r_ptr}")
 
       # child node's pointer
-      attributes[:l_ptr] = r_ptr
-      attributes[:r_ptr] = r_ptr + 1
+      node.l_ptr = r_ptr
+      node.r_ptr = r_ptr + 1
+      node.save
+    end
 
+    def create_child(attributes = {}, &block)
       # bulk update nodes by a sql query
-      update_nodes(r_ptr, r_ptr, "r_ptr >= #{r_ptr}")
+      _update_nodes(r_ptr, r_ptr, "r_ptr >= #{r_ptr}")
 
       # create child
-      self.class.create(attributes)
+      attributes[:l_ptr] = r_ptr
+      attributes[:r_ptr] = r_ptr + 1
+      self.class.create(attributes, &block)
     end
 
-    def remove
-      # remove subtree
-      n_destroyed = self.class.find_subtree_by_root(self).destroy_all
-
-      # fill empty space
-      update_nodes(l_ptr, r_ptr, "r_ptr >= #{r_ptr}", - (width + 1))
-
-      # return count of destroyed nodes
-      n_destroyed
-    end
-
-    def copy_to node
+    def copy_to(node)
       subtree = self.class.find_subtree_by_root(self)
 
       # create empty space into which subtree embedded
-      update_nodes(node.l_ptr, node.r_ptr, "r_ptr >= #{r_ptr}", width + 1)
+      _update_nodes(node.l_ptr, node.r_ptr, "r_ptr >= #{r_ptr}", width + 1)
 
       bias = node.l_ptr + 1 - l_ptr
       subtree.each do |st_node|
@@ -142,7 +163,11 @@ UPDATE #{self.to_s.underscore.pluralize}
       end
     end
 
-    def move_to node
+    def depth
+      path.size - 1
+    end
+
+    def move_to(node)
       # NOTE:
       # copy_to and remove change node ids
       # move operation should change nothing but left and right pointers
@@ -151,11 +176,11 @@ UPDATE #{self.to_s.underscore.pluralize}
       subtree = self.class.find_subtree_by_root(self)
 
       # fill (virtual) empty spaces that will be created by moving subtree
-      update_nodes(l_ptr, r_ptr, "l_ptr > #{r_ptr}", - (width + 1))
+      _update_nodes(l_ptr, r_ptr, "l_ptr > #{r_ptr}", - (width + 1))
 
       # create empty spaces under the node
       node.reload
-      update_nodes(node.l_ptr, node.r_ptr, "l_ptr >= #{node.l_ptr} AND r_ptr <= #{node.r_ptr}", width + 1)
+      _update_nodes(node.l_ptr, node.r_ptr, "l_ptr >= #{node.l_ptr} AND r_ptr <= #{node.r_ptr}", width + 1)
 
       # move subtree under the given node
       bias = node.l_ptr + 1 - l_ptr
@@ -166,12 +191,15 @@ UPDATE #{self.to_s.underscore.pluralize}
       end
     end
 
-    def width
-      r_ptr - l_ptr
-    end
+    def remove
+      # remove subtree
+      n_destroyed = self.class.find_subtree_by_root(self).destroy_all
 
-    def depth
-      path.size - 1
+      # fill empty space
+      _update_nodes(l_ptr, r_ptr, "r_ptr >= #{r_ptr}", - (width + 1))
+
+      # return count of destroyed nodes
+      n_destroyed
     end
 
     def path
@@ -184,10 +212,14 @@ UPDATE #{self.to_s.underscore.pluralize}
       self.class.print_subtree(self)
     end
 
+    def width
+      r_ptr - l_ptr
+    end
+
 
     protected
 
-      def update_nodes left, right, condition, diff=2
+      def _update_nodes(left, right, condition, diff = 2)
         #
         # NOTE:
         # Due to performance reason,

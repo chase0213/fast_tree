@@ -3,7 +3,7 @@ require 'test_helper'
 class FastTree::Test < ActiveSupport::TestCase
 
   test "create_tree should create root node" do
-    root = TestTree.create_tree({name: "test root"})
+    root = TestTree.create_tree(name: "test root")
     assert_equal 0, root.l_ptr
     assert_equal 1, root.r_ptr
     assert_equal "test root", root.name
@@ -25,9 +25,83 @@ class FastTree::Test < ActiveSupport::TestCase
     assert_equal 1, subtree_of_child_out_of_scope.size
   end
 
-  test "add_child should create child node" do
-    root = TestTree.create_tree({name: "test root"})
-    child = root.add_child({name: "test child"})
+  test "add_child should add child node under given parent" do
+    root = TestTree.create({name: "root", l_ptr: 0, r_ptr: 9})
+    child = TestTree.create({name: "child", l_ptr: 1, r_ptr: 6})
+    grand_child_1 = TestTree.create({name: "grand child", l_ptr: 2, r_ptr: 3})
+    grand_child_2 = TestTree.create({name: "grand child", l_ptr: 4, r_ptr: 5})
+    child_out_of_scope = TestTree.create({name: "child out of scope", l_ptr: 7, r_ptr: 8})
+
+    new_node = TestTree.create({name: "new node"})
+    child.add_child(new_node)
+
+    root.reload
+    child.reload
+    grand_child_1.reload
+    grand_child_2.reload
+    child_out_of_scope.reload
+    new_node.reload
+
+    assert_equal 0, root.l_ptr
+    assert_equal 11, root.r_ptr
+    assert_equal "root", root.name
+    assert_equal 1, child.l_ptr
+    assert_equal 8, child.r_ptr
+    assert_equal "child", child.name
+    assert_equal 2, grand_child_1.l_ptr
+    assert_equal 3, grand_child_1.r_ptr
+    assert_equal "grand child", grand_child_1.name
+    assert_equal 4, grand_child_2.l_ptr
+    assert_equal 5, grand_child_2.r_ptr
+    assert_equal "grand child", grand_child_2.name
+    assert_equal 6, new_node.l_ptr
+    assert_equal 7, new_node.r_ptr
+    assert_equal "new node", new_node.name
+    assert_equal 9, child_out_of_scope.l_ptr
+    assert_equal 10, child_out_of_scope.r_ptr
+    assert_equal "child out of scope", child_out_of_scope.name
+  end
+
+  test "add_child should add child node under given parent and move nodes" do
+    root = TestTree.create({name: "root", l_ptr: 0, r_ptr: 9})
+    child = TestTree.create({name: "child", l_ptr: 1, r_ptr: 6})
+    grand_child_1 = TestTree.create({name: "grand child", l_ptr: 2, r_ptr: 3})
+    grand_child_2 = TestTree.create({name: "grand child", l_ptr: 4, r_ptr: 5})
+    child_out_of_scope = TestTree.create({name: "child out of scope", l_ptr: 7, r_ptr: 8})
+
+    new_node = TestTree.create({name: "new node"})
+    grand_child_1.add_child(new_node)
+
+    root.reload
+    child.reload
+    grand_child_1.reload
+    grand_child_2.reload
+    child_out_of_scope.reload
+    new_node.reload
+
+    assert_equal 0, root.l_ptr
+    assert_equal 11, root.r_ptr
+    assert_equal "root", root.name
+    assert_equal 1, child.l_ptr
+    assert_equal 8, child.r_ptr
+    assert_equal "child", child.name
+    assert_equal 2, grand_child_1.l_ptr
+    assert_equal 5, grand_child_1.r_ptr
+    assert_equal "grand child", grand_child_1.name
+    assert_equal 6, grand_child_2.l_ptr
+    assert_equal 7, grand_child_2.r_ptr
+    assert_equal "grand child", grand_child_2.name
+    assert_equal 3, new_node.l_ptr
+    assert_equal 4, new_node.r_ptr
+    assert_equal "new node", new_node.name
+    assert_equal 9, child_out_of_scope.l_ptr
+    assert_equal 10, child_out_of_scope.r_ptr
+    assert_equal "child out of scope", child_out_of_scope.name
+  end
+
+  test "create_child should create child node" do
+    root = TestTree.create_tree(name: "test root")
+    child = root.create_child({name: "test child"})
 
     # must update variable
     root = TestTree.find_by(id: root.id)
@@ -39,10 +113,10 @@ class FastTree::Test < ActiveSupport::TestCase
     assert_equal "test child", child.name
   end
 
-  test "add_child should create child node under given parent" do
-    root = TestTree.create_tree({name: "test root"})
-    child = root.add_child({name: "test child"})
-    grand_child = child.add_child({name: "test grand child"})
+  test "create_child should create child node under given parent" do
+    root = TestTree.create_tree(name: "test root")
+    child = root.create_child(name: "test child")
+    grand_child = child.create_child(name: "test grand child")
 
     # must update variables
     root = TestTree.find_by(id: root.id)
@@ -59,11 +133,14 @@ class FastTree::Test < ActiveSupport::TestCase
     assert_equal "test grand child", grand_child.name
   end
 
-  test "add_child should create child node under given parent, not affecting others" do
-    root = TestTree.create_tree({name: "test root"})
-    child = root.add_child({name: "test child"})
-    grand_child = child.add_child({name: "test grand child"})
-    child_out_of_scope = root.add_child({name: "test child out of scope"})
+  test "create_child should create child node under given parent, not affecting others" do
+    root = TestTree.create_tree(name: "test root")
+    child = root.create_child(name: "test child")
+    grand_child = child.create_child(name: "test grand child")
+
+    # root must be reloaded
+    root.reload
+    child_out_of_scope = root.create_child(name: "test child out of scope")
 
     # must update variables
     root.reload
@@ -90,7 +167,41 @@ class FastTree::Test < ActiveSupport::TestCase
     child_out_of_scope = TestTree.create({name: "child out of scope", l_ptr: 5, r_ptr: 6})
 
     # add parent over child
-    parent = TestTree.add_parent([child], {name: "parent of child"})
+    parent = TestTree.create({name: "parent of child"})
+    TestTree.add_parent(parent, [child])
+
+    # must update variables
+    root.reload
+    child.reload
+    grand_child.reload
+    child_out_of_scope.reload
+    parent.reload
+
+    assert_equal 0, root.l_ptr
+    assert_equal 9, root.r_ptr
+    assert_equal "root", root.name
+    assert_equal 1, parent.l_ptr
+    assert_equal 6, parent.r_ptr
+    assert_equal "parent of child", parent.name
+    assert_equal 2, child.l_ptr
+    assert_equal 5, child.r_ptr
+    assert_equal "child", child.name
+    assert_equal 3, grand_child.l_ptr
+    assert_equal 4, grand_child.r_ptr
+    assert_equal "grand child", grand_child.name
+    assert_equal 7, child_out_of_scope.l_ptr
+    assert_equal 8, child_out_of_scope.r_ptr
+    assert_equal "child out of scope", child_out_of_scope.name
+  end
+
+  test "create_parent should create parent over given children" do
+    root = TestTree.create({name: "root", l_ptr: 0, r_ptr: 7})
+    child = TestTree.create({name: "child", l_ptr: 1, r_ptr: 4})
+    grand_child = TestTree.create({name: "grand child", l_ptr: 2, r_ptr: 3})
+    child_out_of_scope = TestTree.create({name: "child out of scope", l_ptr: 5, r_ptr: 6})
+
+    # add parent over child
+    parent = TestTree.create_parent({name: "parent of child"}, [child])
 
     # must update variables
     root.reload
@@ -113,6 +224,30 @@ class FastTree::Test < ActiveSupport::TestCase
     assert_equal 7, child_out_of_scope.l_ptr
     assert_equal 8, child_out_of_scope.r_ptr
     assert_equal "child out of scope", child_out_of_scope.name
+  end
+
+
+
+  test "destroy should remove a node and not affect the others" do
+    root = TestTree.create({name: "root", l_ptr: 0, r_ptr: 7})
+    child = TestTree.create({name: "child", l_ptr: 1, r_ptr: 4})
+    grand_child = TestTree.create({name: "grand child", l_ptr: 2, r_ptr: 3})
+    child_out_of_scope = TestTree.create({name: "child out of scope", l_ptr: 5, r_ptr: 6})
+
+    # remove child node
+    child.destroy
+
+    # must update variables
+    root.reload
+    grand_child.reload
+    child_out_of_scope.reload
+
+    assert_equal 0, root.l_ptr
+    assert_equal 7, root.r_ptr
+    assert_equal 2, grand_child.l_ptr
+    assert_equal 3, grand_child.r_ptr
+    assert_equal 5, child_out_of_scope.l_ptr
+    assert_equal 6, child_out_of_scope.r_ptr
   end
 
   test "remove should remove a subtree" do
