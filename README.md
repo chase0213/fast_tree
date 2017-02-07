@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/chase0213/fast_tree/tree/master.svg?style=svg)](https://circleci.com/gh/chase0213/fast_tree/tree/master)
 
-Fast tree structure using nested sets model.
+Fast and Intuitive tree structure using nested sets model.
 
 ## Installation
 Add this line to your application's Gemfile:
@@ -30,10 +30,20 @@ Even if you have created a class or not, execute following commands in the termi
 $ bin/rails g fast_tree YOUR_MODEL_NAME
 ```
 
-After executing the command, add following sentence into your model:
+After executing the command, add the following line into your model:
 
 ```ruby
 include FastTree::Model
+```
+
+It seems like:
+
+```ruby
+class YOUR_MODEL_NAME < ApplicationRecord
+  include FastTree::Model
+  
+  ...
+end
 ```
 
 Finally, you can use several methods as class methods and instance methods.
