@@ -197,6 +197,16 @@ root.subtree.bfs.each do |node|
 end
 ```
 
+### Boolean methods
+
+`fast_tree` provides several boolean methods, such as:
+
+- root?
+- leaf?
+- has_children?
+
+, as instance methods.
+
 ## How It Works
 The migration file will create a migration file, such as:
 
