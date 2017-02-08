@@ -24,13 +24,15 @@ $ gem install fast_tree
 ## Usage
 
 `fast_tree` provides a generator which adds left and right pointers used in nested sets model to your model class.
-Even if you have created a class or not, execute following commands in the terminal:
+Even if you have created a target class or not, execute following commands in your terminal:
 
 ```bash
 $ bin/rails g fast_tree YOUR_MODEL_NAME
 ```
 
-After executing the command, add the following line into your model:
+and, execute migration by `bundle exec rake db:migrate`.
+
+After that, add the following line into your model:
 
 ```ruby
 include FastTree::Model
@@ -155,7 +157,7 @@ To get the root node from the tree,
 root = YOUR_MODEL_NAME.find_root
 ```
 
-### Deal with subtree
+### Deal with subtrees
 
 To get subtree from a root node,
 
@@ -186,8 +188,14 @@ end
 
 #### BFS (Breadth First Search)
 
-It'll be released in the next version!
+To get nodes by BFS,
 
+```ruby
+root = YOUR_MODEL_NAME.take
+root.subtree.bfs.each do |node|
+  # do something
+end
+```
 
 ## How It Works
 The migration file will create a migration file, such as:
@@ -199,11 +207,13 @@ class AddFastTreeToTestTrees < ActiveRecord::Migration[5.0]
       ## Pointers
       t.integer :l_ptr
       t.integer :r_ptr
+      t.integer :depth
 
     end
 
     add_index :test_trees, :l_ptr
     add_index :test_trees, :r_ptr
+    add_index :test_trees, :depth
   end
 
   def self.down
