@@ -168,14 +168,15 @@ UPDATE #{self.to_s.underscore.pluralize}
     end
 
     def copy_to(node)
-      subtree = self.class.find_subtree_by_root(self)
-
       # create empty space into which subtree embedded
-      _update_nodes(node.l_ptr, node.r_ptr, "r_ptr >= #{r_ptr}", width + 1)
+      _update_nodes(node.l_ptr, node.r_ptr, "r_ptr >= #{node.r_ptr}", width + 1)
+
+      self.class.find_root.print_subtree
 
       bias = node.l_ptr + 1 - l_ptr
+      puts("bias = #{bias}, subtree size: #{subtree.size}")
       base_depth = depth
-      subtree.each do |st_node|
+      self.subtree.each do |st_node|
         attributes = st_node.attributes.to_h
         attributes.delete("id")
         attributes["l_ptr"] += bias
@@ -183,15 +184,13 @@ UPDATE #{self.to_s.underscore.pluralize}
         attributes["depth"] += node.depth - base_depth + 1
         self.class.create(attributes)
       end
+      self.class.find_root.print_subtree
     end
 
     def move_to(node)
       # NOTE:
       # copy_to and remove change node ids
       # move operation should change nothing but left and right pointers
-
-      # bind subtree to a variable
-      subtree = self.class.find_subtree_by_root(self)
 
       # fill (virtual) empty spaces that will be created by moving subtree
       _update_nodes(l_ptr, r_ptr, "l_ptr > #{r_ptr}", - (width + 1))
@@ -203,7 +202,7 @@ UPDATE #{self.to_s.underscore.pluralize}
       # move subtree under the given node
       bias = node.l_ptr + 1 - l_ptr
       base_depth = depth
-      subtree.each do |st_node|
+      self.subtree.each do |st_node|
         st_node.l_ptr += bias
         st_node.r_ptr += bias
         st_node.depth += node.depth - base_depth + 1

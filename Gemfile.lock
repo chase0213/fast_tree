@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    fast_tree (0.1.0)
+    fast_tree (0.2.0)
       rails (>= 4.0.0)
 
 GEM
@@ -118,4 +118,4 @@ DEPENDENCIES
   sqlite3
 
 BUNDLED WITH
-   1.12.4
+   1.13.6
