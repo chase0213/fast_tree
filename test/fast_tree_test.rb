@@ -1,1 +1,2 @@
-require 'model/model_test'
+require 'model_test'
+require 'model/subtree_test'

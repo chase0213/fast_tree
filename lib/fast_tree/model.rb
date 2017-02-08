@@ -2,6 +2,11 @@ module FastTree
   module Model
     extend ActiveSupport::Concern
 
+    included do
+      include FastTree::Model::Subtree::Traverse
+    end
+
+
     # =================
     # Class Methods
     # =================

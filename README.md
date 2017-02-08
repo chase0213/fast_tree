@@ -41,7 +41,7 @@ It seems like:
 ```ruby
 class YOUR_MODEL_NAME < ApplicationRecord
   include FastTree::Model
-  
+
   ...
 end
 ```
@@ -146,6 +146,47 @@ target = YOUR_MODEL_NAME.second
 
 root_of_subtree.move_to(targe)
 ```
+
+### Find root
+
+To get the root node from the tree,
+
+```
+root = YOUR_MODEL_NAME.find_root
+```
+
+### Deal with subtree
+
+To get subtree from a root node,
+
+```ruby
+# root can be any node in the tree
+root = YOUR_MODEL_NAME.take
+root.subtree.each do |node|
+  # do something
+end
+```
+
+NOTE: `subtree` method returns ActiveRelation, so that you can use `each`, `map` or anything you want!
+
+### Tree traverse algorithms
+
+In `fast_tree`, several tree-traverse algorithms, such as DFS and BFS, are provided.
+
+#### DFS (Depth First Search)
+
+To get nodes by DFS,
+
+```ruby
+root = YOUR_MODEL_NAME.take
+root.subtree.dfs.each do |node|
+  # do something
+end
+```
+
+#### BFS (Breadth First Search)
+
+It'll be released in the next version!
 
 
 ## How It Works
