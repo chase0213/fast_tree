@@ -12,5 +12,6 @@ class FastTreeCreate<%= table_name.camelize %> < ActiveRecord::Migration<%= migr
 
     add_index :<%= table_name %>, :l_ptr
     add_index :<%= table_name %>, :r_ptr
+    add_index :<%= table_name %>, :depth
   end
 end

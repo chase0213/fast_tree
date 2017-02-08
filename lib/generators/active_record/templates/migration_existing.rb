@@ -10,6 +10,7 @@ class AddFastTreeTo<%= table_name.camelize %> < ActiveRecord::Migration<%= migra
 
     add_index :<%= table_name %>, :l_ptr
     add_index :<%= table_name %>, :r_ptr
+    add_index :<%= table_name %>, :depth
   end
 
   def self.down

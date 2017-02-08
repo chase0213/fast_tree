@@ -18,22 +18,28 @@ module FastTree
       # ====================
 
       def add_parent(parent, children, &block)
+        parent_depth = children.first.depth
+
         # create space for parent
         ptrs = _create_parent_embedded_space(children)
 
         # parent node's pointer
         parent.l_ptr = ptrs[:l_ptr]
         parent.r_ptr = ptrs[:r_ptr]
+        parent.depth = parent_depth
         parent.save
       end
 
       def create_parent(attributes = {}, children, &block)
+        parent_depth = children.first.depth
+
         # create space for parent
         ptrs = _create_parent_embedded_space(children)
 
         # parent node's pointer
         attributes[:l_ptr] = ptrs[:l_ptr]
         attributes[:r_ptr] = ptrs[:r_ptr]
+        attributes[:depth] = parent_depth
 
         self.create(attributes, &block)
       end
@@ -45,6 +51,7 @@ module FastTree
         else
           attributes[:l_ptr] = 0
           attributes[:r_ptr] = 1
+          attributes[:depth] = 0
           self.create(attributes, &block)
         end
       end
@@ -74,6 +81,12 @@ UPDATE #{self.to_s.underscore.pluralize}
                 WHEN l_ptr > #{right}
                   THEN r_ptr + 2
                 ELSE r_ptr
+              END,
+      depth = CASE
+                WHEN l_ptr >= #{left}
+                  AND r_ptr <= #{right}
+                  THEN depth + 1
+                ELSE depth
               END
   WHERE r_ptr > #{left}
         EOS
@@ -139,6 +152,7 @@ UPDATE #{self.to_s.underscore.pluralize}
       # child node's pointer
       node.l_ptr = r_ptr
       node.r_ptr = r_ptr + 1
+      node.depth = depth + 1
       node.save
     end
 
@@ -149,6 +163,7 @@ UPDATE #{self.to_s.underscore.pluralize}
       # create child
       attributes[:l_ptr] = r_ptr
       attributes[:r_ptr] = r_ptr + 1
+      attributes[:depth] = depth + 1
       self.class.create(attributes, &block)
     end
 
@@ -159,17 +174,15 @@ UPDATE #{self.to_s.underscore.pluralize}
       _update_nodes(node.l_ptr, node.r_ptr, "r_ptr >= #{r_ptr}", width + 1)
 
       bias = node.l_ptr + 1 - l_ptr
+      base_depth = depth
       subtree.each do |st_node|
         attributes = st_node.attributes.to_h
         attributes.delete("id")
-        attributes["l_ptr"] = attributes["l_ptr"] + bias
-        attributes["r_ptr"] = attributes["r_ptr"] + bias
+        attributes["l_ptr"] += bias
+        attributes["r_ptr"] += bias
+        attributes["depth"] += node.depth - base_depth + 1
         self.class.create(attributes)
       end
-    end
-
-    def depth
-      path.size - 1
     end
 
     def move_to(node)
@@ -189,9 +202,11 @@ UPDATE #{self.to_s.underscore.pluralize}
 
       # move subtree under the given node
       bias = node.l_ptr + 1 - l_ptr
+      base_depth = depth
       subtree.each do |st_node|
         st_node.l_ptr += bias
         st_node.r_ptr += bias
+        st_node.depth += node.depth - base_depth + 1
         st_node.save
       end
     end

@@ -26,6 +26,8 @@ ActiveRecord::Schema.define(version: 20170205015904) do
     t.datetime "updated_at", null: false
     t.integer  "l_ptr"
     t.integer  "r_ptr"
+    t.integer  "depth"
+    t.index ["depth"], name: "index_test_trees_on_depth"
     t.index ["l_ptr"], name: "index_test_trees_on_l_ptr"
     t.index ["r_ptr"], name: "index_test_trees_on_r_ptr"
   end

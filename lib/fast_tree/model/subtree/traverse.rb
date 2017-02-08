@@ -5,6 +5,7 @@ module FastTree
         extend ActiveSupport::Concern
 
         included do
+          scope :bfs, -> { order(depth: :asc, l_ptr: :asc) }
           scope :dfs, -> { order(l_ptr: :asc) }
         end
 

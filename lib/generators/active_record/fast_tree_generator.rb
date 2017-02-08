@@ -26,6 +26,7 @@ module ActiveRecord
       ## Pointers
       t.integer :l_ptr
       t.integer :r_ptr
+      t.integer :depth
 RUBY
       end
 
