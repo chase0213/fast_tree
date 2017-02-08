@@ -565,4 +565,37 @@ class FastTree::Model::Test < ActiveSupport::TestCase
     assert_equal [@root, @child_out_of_scope], @child_out_of_scope.path
   end
 
+  test "root? should return true if the receiver is the root" do
+    assert_equal true, @root.root?
+  end
+
+  test "root? should return false if the receiver is not the root" do
+    assert_equal false, @child.root?
+    assert_equal false, @grandchild_1.root?
+    assert_equal false, @grandchild_2.root?
+    assert_equal false, @child_out_of_scope.root?
+  end
+
+  test "leaf? should return true if the receiver is the leaf node" do
+    assert_equal true, @grandchild_1.leaf?
+    assert_equal true, @grandchild_2.leaf?
+    assert_equal true, @child_out_of_scope.leaf?
+  end
+
+  test "leaf? should return false if the receiver is not the leaf node" do
+    assert_equal false, @root.leaf?
+    assert_equal false, @child.leaf?
+  end
+
+  test "has_children? should return true if the receiver has a child or children" do
+    assert_equal true, @root.has_children?
+    assert_equal true, @child.has_children?
+  end
+
+  test "has_children? should return false if the receiver has no children" do
+    assert_equal false, @grandchild_1.has_children?
+    assert_equal false, @grandchild_2.has_children?
+    assert_equal false, @child_out_of_scope.has_children?
+  end
+
 end

@@ -237,6 +237,23 @@ UPDATE #{self.to_s.underscore.pluralize}
     end
 
 
+    #
+    # Boolean Methods
+    #
+
+    def root?
+      self.l_ptr == 0
+    end
+
+    def leaf?
+      l_ptr == r_ptr - 1
+    end
+
+    def has_children?
+      l_ptr != r_ptr - 1
+    end
+
+
     protected
 
       def _update_nodes(left, right, condition, diff = 2)
