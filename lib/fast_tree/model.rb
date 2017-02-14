@@ -171,10 +171,11 @@ UPDATE #{self.to_s.underscore.pluralize}
       # create empty space into which subtree embedded
       _update_nodes(node.l_ptr, node.r_ptr, "r_ptr >= #{node.r_ptr}", width + 1)
 
-      self.class.find_root.print_subtree
+      # self and node may be updated by shifting
+      self.reload
+      node.reload
 
-      bias = node.l_ptr + 1 - l_ptr
-      puts("bias = #{bias}, subtree size: #{subtree.size}")
+      bias = node.r_ptr - r_ptr - 1
       base_depth = depth
       self.subtree.each do |st_node|
         attributes = st_node.attributes.to_h
@@ -184,7 +185,6 @@ UPDATE #{self.to_s.underscore.pluralize}
         attributes["depth"] += node.depth - base_depth + 1
         self.class.create(attributes)
       end
-      self.class.find_root.print_subtree
     end
 
     def move_to(node)
@@ -192,15 +192,18 @@ UPDATE #{self.to_s.underscore.pluralize}
       # copy_to and remove change node ids
       # move operation should change nothing but left and right pointers
 
-      # fill (virtual) empty spaces that will be created by moving subtree
-      _update_nodes(l_ptr, r_ptr, "l_ptr > #{r_ptr}", - (width + 1))
-
       # create empty spaces under the node
+      _update_nodes(node.r_ptr, node.r_ptr, "r_ptr >= #{node.r_ptr}", width + 1)
+
+      self.reload
       node.reload
-      _update_nodes(node.l_ptr, node.r_ptr, "l_ptr >= #{node.l_ptr} AND r_ptr <= #{node.r_ptr}", width + 1)
+
+      # remember where the node were
+      empty_space_left = self.l_ptr
+      empty_space_right = self.r_ptr
 
       # move subtree under the given node
-      bias = node.l_ptr + 1 - l_ptr
+      bias = node.r_ptr - r_ptr - 1
       base_depth = depth
       self.subtree.each do |st_node|
         st_node.l_ptr += bias
@@ -208,6 +211,12 @@ UPDATE #{self.to_s.underscore.pluralize}
         st_node.depth += node.depth - base_depth + 1
         st_node.save
       end
+
+      self.reload
+      node.reload
+
+      # fill (virtual) empty spaces that will be created by moving subtree
+      _update_nodes(empty_space_left, empty_space_right, "r_ptr > #{empty_space_right}", - (width + 1))
     end
 
     def remove
@@ -256,6 +265,45 @@ UPDATE #{self.to_s.underscore.pluralize}
     protected
 
       def _update_nodes(left, right, condition, diff = 2)
+        #
+        # Possible patterns
+        #
+        #     left         right
+        # --------------------------
+        # <---> |            |         ... 1.
+        #     <----->        |         ... 2.
+        #       |  <----->   |         ... 3.
+        #       |         <----->      ... 4.
+        #       |            | <---->  ... 5.
+        #   <------------------->      ... 6.
+        #       |            |
+        #
+        #
+        # 1: do nothing
+        #   l_ptr <- l_ptr
+        #   r_ptr <- r_ptr
+        #
+        # 2: do nothing (illegal node)
+        #   l_ptr <- l_ptr
+        #   r_ptr <- r_ptr
+        #
+        # 3: move diff - 1 to the right
+        #   l_ptr <- l_ptr + diff - 1
+        #   r_ptr <- r_ptr + diff - 1
+        #
+        # 4: do nothing (illegal node)
+        #   l_ptr <- l_ptr
+        #   r_ptr <- r_ptr
+        #
+        # 5: move diff to the right
+        #   l_ptr <- l_ptr + diff
+        #   r_ptr <- r_ptr + diff
+        #
+        # 6: move right endpoint by diff to the right
+        #   l_ptr <- l_ptr
+        #   r_ptr <- r_ptr + diff
+        #
+
         #
         # NOTE:
         # Due to performance reason,
