@@ -6,11 +6,11 @@ class FastTree::Model::Test < ActiveSupport::TestCase
     #
     # Create a tree for testing
     #
-    # <--------->   ... @root
-    # _<----->      ... @child
-    # __<->         ... grand @child
-    # ____<->       ... grand @child
-    # _______<->    ... @child out of scope
+    # <--------->   ... root
+    # _<----->      ... child
+    # __<->         ... grandchild_1
+    # ____<->       ... grandchild_2
+    # _______<->    ... child out of scope
     #
     @root = TestTree.create({name: "root", l_ptr: 0, r_ptr: 9, depth: 0})
     @child = TestTree.create({name: "child", l_ptr: 1, r_ptr: 6, depth: 1})
@@ -764,4 +764,30 @@ class FastTree::Model::Test < ActiveSupport::TestCase
     assert_equal false, @child_out_of_scope.has_children?
   end
 
+  test "parent should return parent" do
+    assert_equal @root, @child.parent
+    assert_equal @root, @child_out_of_scope.parent
+    assert_equal @child, @grandchild_1.parent
+    assert_equal @child, @grandchild_2.parent
+  end
+
+  test "parent should return nil if the receiver is the root" do
+    assert_nil @root.parent
+  end
+
+  test "children should return children" do
+    # it doesn't care about the order
+    assert_equal true, @root.children.exists?(id: @child.id)
+    assert_equal true, @root.children.exists?(id: @child_out_of_scope.id)
+    assert_equal true, @child.children.exists?(id: @grandchild_1)
+    assert_equal true, @child.children.exists?(id: @grandchild_2)
+  end
+
+  test "children should empty array if the node has no children (i.e., leaf)" do
+    assert_equal [], @grandchild_1.children
+    assert_equal [], @grandchild_2.children
+    assert_equal [], @child_out_of_scope.children
+  end
+
 end
+
