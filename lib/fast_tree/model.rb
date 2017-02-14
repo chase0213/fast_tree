@@ -261,6 +261,23 @@ UPDATE #{self.to_s.underscore.pluralize}
       l_ptr != r_ptr - 1
     end
 
+    #
+    # Getter Methods
+    #
+
+    def parent
+      self.class.where(self.class.arel_table[:l_ptr].lt(l_ptr))
+                .where(self.class.arel_table[:r_ptr].gt(r_ptr))
+                .where(depth: depth - 1)
+                .try(:first)
+    end
+
+    def children
+      self.class.where(self.class.arel_table[:l_ptr].gt(l_ptr))
+                .where(self.class.arel_table[:r_ptr].lt(r_ptr))
+                .where(depth: depth + 1)
+    end
+
 
     protected
 
