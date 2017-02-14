@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    fast_tree (0.2.0)
+    fast_tree (0.2.1)
       rails (>= 4.0.0)
 
 GEM
