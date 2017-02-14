@@ -197,6 +197,23 @@ root.subtree.bfs.each do |node|
 end
 ```
 
+### Parent and children
+
+To get a parent node,
+
+```ruby
+node = YOUR_MODEL_NAME.take
+node.parent
+```
+
+or child nodes,
+
+```ruby
+node = YOUR_MODEL_NAME.take
+node.children
+```
+
+
 ### Boolean methods
 
 `fast_tree` provides several boolean methods, such as:
