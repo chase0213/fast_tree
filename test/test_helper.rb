@@ -1,3 +1,5 @@
+require "rails/test_unit/reporter"
+
 # Configure Rails Environment
 ENV["RAILS_ENV"] = "test"
 
