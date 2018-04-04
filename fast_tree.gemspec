@@ -19,5 +19,4 @@ Gem::Specification.new do |s|
   s.add_dependency "rails", ">= 4.0.0"
 
   s.add_development_dependency "sqlite3"
-  s.add_development_dependency "acts_as_tree"
 end
